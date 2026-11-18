@@ -74,6 +74,14 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 .task .box{width:22px;height:22px;border-radius:7px;border:2px solid #4a5160;flex:none}
 .task[aria-pressed=true]{color:var(--mute);text-decoration:line-through}
 .task[aria-pressed=true] .box{background:var(--acc);border-color:var(--acc)}
+.vozrows{display:grid;gap:10px}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#0f1115}
+.vrow p{margin:0;font-size:15px;line-height:1.4}
+.vrow small{display:block;color:var(--mute);font-size:13px;margin-bottom:2px}
+.vrow .acts{display:flex;gap:6px}
+.vrow button{min-height:44px;min-width:44px;padding:0 12px;font-size:15px}
+.vrow.ok{border-color:#2F7BFF}
+.rec{background:#e5322d!important;border-color:#e5322d!important;color:#fff}
 @media(prefers-reduced-motion:reduce){.bar i{transition:none}}
 </style>
 </head>
@@ -97,6 +105,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
     <div class="row">
       <button class="main" id="goEdit">Editar el reel de hoy</button>
       <button id="goPlan">Mi plan</button>
+      <button id="goVoz">Mi voz</button>
     </div>
   </div>
   <div class="card" id="plan" hidden>
@@ -104,6 +113,12 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
     <p class="note">Lo que Iron Dan te dice cada día. Se guarda en tu teléfono.</p>
     <div id="planRows" style="display:grid;gap:10px"></div>
     <label>Hora de publicar<input id="hora" type="text" value="7:00 pm"></label>
+  </div>
+  <div class="card" id="voz" hidden>
+    <h2>Mi voz</h2>
+    <p class="note">Graba cada frase una vez con tu voz. Cuando toques a Iron Dan te va a hablar con estas grabaciones. Lo mínimo para empezar: el saludo y 3 frases. Se guardan solo en tu teléfono.</p>
+    <p class="note" id="vozEstado"></p>
+    <div id="vozRows" class="vozrows"></div>
   </div>
 </section>
 
@@ -177,7 +192,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 
 <script>
 {
-const SPRITE = {"idle":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSMMMSSSSs....",".......sSSSSSSSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"],"flex":[".........hHHHHh...................",".......HHHHhhHHHH.................","......HHHhhHHHHHHHH...............",".....HHhHHHHHHhhHHHH..............",".....HHHHHHHHHHHHHHHH.............","....KHHHHHHHHHHHHHHHHK..sYSs......","....KHHHSSSHHHSSSSHHHK.sSSSSs.....","...KKKHSSSSSSSSSSSSHKKKSSSSSS.....","...KGKHSSSSSSSSSSSSHKGKSSssSS.....","...KGKSSHHHSSSSHHHSSKGK.SSSS......","...KGKSSSSSSSSSSSSSSKGK.SSSs......","...KKKSSSESSSSSSESSSKKK.SSSs......",".....SSSSESSssSSESSSS...SSSs......",".....sSSSSSSSSSSSSSSs..SSSSs......","......sSSSSSMMMSSSSs...SSSSs......",".......sSSSSSSSSSSs...SSSSSs......",".........ssSSSSss....SYYSSSSs.....","..........sSSSs.....NSSSSSSSs.....","....nNNNNNNNNNNNNNNNNNSSSSSs......","...NNNNNNBNNNNNNBNNNNNNsss........","..SNNNNNNBNNNNNNBNNNNN............","..SSNNNNNNNNNNNNNNNNNN............","..SSNNNNNNNnnnnNNNNNNN............","..SSNNNNNNNNNNNNNNNNNN............","..SSnNNNNNNNNNNNNNNNNn............","..WWwLLLLLLLLLLLLLLLLs............","..SS.LLLLLLLLLLLLLLLL.............",".....LLLLlLLL..LLLlLLLL...........",".....LLlLLLLL..LLLLLlLL...........",".....LLllLLLL..LLLLllLL...........",".....LLLLLLLL..LLLLLLLL...........",".....LLLLLLLL..LLLLLLLL...........","....TTTTTTTTT..TTTTTTTTT.........."],"pal":{"K":"#14141a","G":"#3c3e48","H":"#1e1a19","h":"#4e4038","S":"#ce9268","s":"#aa704e","E":"#181416","M":"#7a483c","N":"#1e2c52","n":"#141e3a","B":"#344a80","W":"#0e0e12","w":"#6ecdff","L":"#18181c","l":"#2e2e36","T":"#ececf0","Y":"#e8b286"},"talk":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSEEESSSSs....",".......sSSSSMMSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"]};
+const SPRITE = {"idle":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSMMMSSSSs....",".......sSSSSSSSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"],"flex":[".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSMMMSSSSs....",".......sSSSSSSSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT","........................"],"pal":{"K":"#14141a","G":"#3c3e48","H":"#1e1a19","h":"#4e4038","S":"#ce9268","s":"#aa704e","E":"#181416","M":"#7a483c","N":"#1e2c52","n":"#141e3a","B":"#344a80","W":"#0e0e12","w":"#6ecdff","L":"#18181c","l":"#2e2e36","T":"#ececf0","Y":"#e8b286"},"talk":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSEEESSSSs....",".......sSSSSMMSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"]};
 const CFG = {inicio:'2026-11-09', dias:90, peso0:99, meta:83, handle:'@soy_irondan', reto:'RETO NIGHTWING', acc:'#2F7BFF'};
 const W = 1080, H = 1920, FPS = 30;
 const $ = id => document.getElementById(id);
@@ -541,19 +556,73 @@ async function cargarVoces() {
 function reproducir(src) {
   return new Promise(ok => { const a = new Audio(src); a.onended = ok; a.onerror = ok; a.play().catch(ok); });
 }
+// ---------- Mi voz: grabaciones guardadas en el teléfono (IndexedDB) ----------
+const SALUDO_TXT = '¡Qué onda, Danny! Vamos por otro día del reto.';
+const clipsDef = () => [
+  {id:'saludo', etiqueta:'Saludo', texto: SALUDO_TXT},
+  ...[1,2,3,4,5,6,0].map(d => ({id:'ent-'+d, etiqueta:'Entreno · '+DIAS[d], texto: /descanso/i.test(plan[d]) ? `Hoy toca ${plan[d].toLowerCase()}, pero el contenido no descansa.` : `Hoy toca ${plan[d].toLowerCase()}.`})),
+  ...FRASES.map((f,i) => ({id:'fr-'+i, etiqueta:'Frase '+(i+1), texto:f}))
+];
+let dbp = null;
+const db = () => dbp || (dbp = new Promise((ok, bad) => { const r = indexedDB.open('irondan-voz', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('clips'); r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); }));
+const dbDo = async (modo, fn) => { const d = await db(); return new Promise((ok, bad) => { const tx = d.transaction('clips', modo); const req = fn(tx.objectStore('clips')); tx.oncomplete = () => ok(req && req.result); tx.onerror = () => bad(tx.error); }); };
+const getClip = id => dbDo('readonly', s => s.get(id)).catch(() => null);
+const putClip = (id, b) => dbDo('readwrite', s => s.put(b, id));
+const delClip = id => dbDo('readwrite', s => s.delete(id));
+const keysClips = () => dbDo('readonly', s => s.getAllKeys()).catch(() => []);
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e) {}
+
+let grabando = null;
+async function renderVoz() {
+  const tengo = new Set(await keysClips());
+  const frasesOk = [...tengo].filter(k => k.startsWith('fr-')).length;
+  $('vozEstado').textContent = `Grabadas: ${tengo.size} de ${clipsDef().length}` + (tengo.has('saludo') && frasesOk ? ' · Iron Dan ya habla con tu voz ✓' : '');
+  $('vozRows').innerHTML = clipsDef().map(c => `<div class="vrow ${tengo.has(c.id) ? 'ok' : ''}" data-id="${c.id}">
+    <p><small>${c.etiqueta}${tengo.has(c.id) ? ' · grabada ✓' : ''}</small>${c.texto}</p>
+    <div class="acts"><button data-a="rec" aria-label="Grabar">● Grabar</button>${tengo.has(c.id) ? '<button data-a="play" aria-label="Escuchar">▶</button><button data-a="del" aria-label="Borrar">✕</button>' : ''}</div></div>`).join('');
+  $('vozRows').querySelectorAll('button').forEach(b => b.onclick = () => accionVoz(b.closest('.vrow').dataset.id, b.dataset.a, b));
+}
+async function accionVoz(id, a, btn) {
+  if (a === 'play') { const b = await getClip(id); if (b) reproducir(URL.createObjectURL(b)); return; }
+  if (a === 'del') { await delClip(id); renderVoz(); return; }
+  if (grabando) { grabando.stop(); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}}); }
+  catch(e) { $('vozEstado').textContent = 'Necesito permiso del micrófono. Ve a Ajustes → Safari → Micrófono → Permitir, y vuelve a intentar.'; return; }
+  const tipo = ['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, tipo ? {mimeType: tipo} : undefined), partes = [];
+  rec.ondataavailable = e => e.data.size && partes.push(e.data);
+  rec.onstop = async () => { stream.getTracks().forEach(t => t.stop()); grabando = null;
+    const blob = new Blob(partes, {type: rec.mimeType || tipo || 'audio/mp4'});
+    if (blob.size > 2000) await putClip(id, blob); renderVoz(); };
+  grabando = rec; rec.start();
+  btn.textContent = '■ Parar'; btn.classList.add('rec');
+  setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 15000);
+}
+$('goVoz').onclick = () => { $('voz').hidden = !$('voz').hidden; if (!$('voz').hidden) { renderVoz(); $('voz').scrollIntoView({behavior:'smooth'}); } };
+
 async function hablar() {
-  const m = mensaje(); escribir(m.texto); $('tap').hidden = true;
-  hablando = true;
-  const v = await cargarVoces();
-  const dia = v.dias && v.dias[diaHoy], ent = v.entreno && v.entreno[entreno], fr = v.frases && v.frases[fraseIdx];
-  if (dia && fr) {
-    await reproducir('voz/' + dia); if (ent) await reproducir('voz/' + ent); await reproducir('voz/' + fr);
+  if (hablando) return;
+  const m = mensaje(); $('tap').hidden = true; hablando = true;
+  const tengo = new Set(await keysClips());
+  if (tengo.has('saludo')) {
+    // Usa la frase del día si está grabada; si no, una grabada al azar
+    const grabadas = FRASES.map((_,i) => i).filter(i => tengo.has('fr-' + i));
+    const fi = tengo.has('fr-' + fraseIdx) ? fraseIdx : grabadas[Math.floor(Math.random() * grabadas.length)];
+    const entId = 'ent-' + dow;
+    escribir(`Día ${diaHoy} de 90. Hoy toca ${entreno.toLowerCase()}.` + (fi !== undefined ? ' ' + FRASES[fi] : ''));
+    const play = async id => { const b = await getClip(id); if (b) await reproducir(URL.createObjectURL(b)); };
+    await play('saludo');
+    if (tengo.has(entId)) await play(entId);
+    if (fi !== undefined) await play('fr-' + fi);
   } else if ('speechSynthesis' in window) {
+    escribir(m.texto);
     await new Promise(ok => {
       const u = new SpeechSynthesisUtterance(m.saludo + ' ' + m.texto);
       u.lang = 'es-MX'; u.rate = 1.03; u.pitch = 0.85;
       const vs = speechSynthesis.getVoices().filter(x => x.lang.startsWith('es'));
-      u.voice = vs.find(x => /MX/.test(x.lang) && /Juan|Diego|Jorge|male/i.test(x.name)) || vs.find(x => /MX/.test(x.lang)) || vs[0] || null;
+      u.voice = vs.find(x => /MX/.test(x.lang)) || vs[0] || null;
       u.onend = ok; u.onerror = ok; speechSynthesis.cancel(); speechSynthesis.speak(u);
     });
   }
