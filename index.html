@@ -75,6 +75,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
 .task[aria-pressed=true]{color:var(--mute);text-decoration:line-through}
 .task[aria-pressed=true] .box{background:var(--acc);border-color:var(--acc)}
 .vozrows{display:grid;gap:10px}
+.aviso{position:sticky;top:8px;z-index:5;margin:0;padding:12px 14px;border-radius:12px;background:#2F7BFF;color:#fff;font-weight:600;font-size:15px}
 .vrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#0f1115}
 .vrow p{margin:0;font-size:15px;line-height:1.4}
 .vrow small{display:block;color:var(--mute);font-size:13px;margin-bottom:2px}
@@ -118,6 +119,7 @@ body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-i
     <h2>Mi voz</h2>
     <p class="note">Graba cada frase una vez con tu voz. Cuando toques a Iron Dan te va a hablar con estas grabaciones. Lo mínimo para empezar: el saludo y 3 frases. Se guardan solo en tu teléfono.</p>
     <p class="note" id="vozEstado"></p>
+    <p class="aviso" id="vozAviso" hidden></p>
     <div id="vozRows" class="vozrows"></div>
   </div>
 </section>
@@ -564,16 +566,41 @@ const clipsDef = () => [
   ...FRASES.map((f,i) => ({id:'fr-'+i, etiqueta:'Frase '+(i+1), texto:f}))
 ];
 let dbp = null;
-const db = () => dbp || (dbp = new Promise((ok, bad) => { const r = indexedDB.open('irondan-voz', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('clips'); r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); }));
-const dbDo = async (modo, fn) => { const d = await db(); return new Promise((ok, bad) => { const tx = d.transaction('clips', modo); const req = fn(tx.objectStore('clips')); tx.oncomplete = () => ok(req && req.result); tx.onerror = () => bad(tx.error); }); };
-const getClip = id => dbDo('readonly', s => s.get(id)).catch(() => null);
-const putClip = (id, b) => dbDo('readwrite', s => s.put(b, id));
-const delClip = id => dbDo('readwrite', s => s.delete(id));
-const keysClips = () => dbDo('readonly', s => s.getAllKeys()).catch(() => []);
+const db = () => dbp || (dbp = new Promise((ok, bad) => { try { const r = indexedDB.open('irondan-voz', 2);
+  r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('clips')) r.result.createObjectStore('clips'); };
+  r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); r.onblocked = () => bad(new Error('bloqueada')); } catch(e) { bad(e); } }));
+const dbDo = async (modo, fn) => { const d = await db(); return new Promise((ok, bad) => { const tx = d.transaction('clips', modo); const req = fn(tx.objectStore('clips')); tx.oncomplete = () => ok(req && req.result); tx.onerror = () => bad(tx.error); tx.onabort = () => bad(tx.error); }); };
+// Respaldo si IndexedDB falla: localStorage en base64
+const LS = 'irondan_clip_';
+const b64 = buf => { let s = '', u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0)).buffer;
+const memoria = {};
+async function putClip(id, blob) {
+  const buf = await blob.arrayBuffer(), rec = {type: blob.type || 'audio/mp4', buf};
+  memoria[id] = rec;
+  try { await dbDo('readwrite', s => s.put(rec, id)); return 'ok'; }
+  catch(e) { try { localStorage.setItem(LS + id, JSON.stringify({type: rec.type, d: b64(buf)})); return 'ok'; }
+    catch(e2) { return 'Solo se guardó mientras la app esté abierta (' + (e && e.name || e) + ')'; } }
+}
+async function getClip(id) {
+  let r = memoria[id];
+  if (!r) { try { r = await dbDo('readonly', s => s.get(id)); } catch(e) {} }
+  if (!r) { try { const j = JSON.parse(localStorage.getItem(LS + id) || 'null'); if (j) r = {type: j.type, buf: unb64(j.d)}; } catch(e) {} }
+  if (!r) return null;
+  if (r instanceof Blob) return r;
+  return new Blob([r.buf], {type: r.type});
+}
+async function delClip(id) { delete memoria[id]; try { await dbDo('readwrite', s => s.delete(id)); } catch(e) {} try { localStorage.removeItem(LS + id); } catch(e) {} }
+async function keysClips() {
+  const k = new Set(Object.keys(memoria));
+  try { (await dbDo('readonly', s => s.getAllKeys())).forEach(x => k.add(x)); } catch(e) {}
+  try { for (let i = 0; i < localStorage.length; i++) { const n = localStorage.key(i); if (n.startsWith(LS)) k.add(n.slice(LS.length)); } } catch(e) {}
+  return [...k];
+}
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e) {}
 
-let grabando = null;
+let grabando = null, avisoVoz = '';
+const aviso = t => { avisoVoz = t; $('vozAviso').textContent = t; $('vozAviso').hidden = !t; };
 async function renderVoz() {
   const tengo = new Set(await keysClips());
   const frasesOk = [...tengo].filter(k => k.startsWith('fr-')).length;
@@ -584,20 +611,32 @@ async function renderVoz() {
   $('vozRows').querySelectorAll('button').forEach(b => b.onclick = () => accionVoz(b.closest('.vrow').dataset.id, b.dataset.a, b));
 }
 async function accionVoz(id, a, btn) {
-  if (a === 'play') { const b = await getClip(id); if (b) reproducir(URL.createObjectURL(b)); return; }
+  if (a === 'play') { const b = await getClip(id); if (b) { aviso(''); await reproducir(URL.createObjectURL(b)); } else aviso('No encontré esa grabación.'); return; }
   if (a === 'del') { await delClip(id); renderVoz(); return; }
   if (grabando) { grabando.stop(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { aviso('Este navegador no deja grabar audio. Abre la app desde el ícono de tu pantalla de inicio o desde Safari.'); return; }
+  aviso('Pidiendo el micrófono...');
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}}); }
-  catch(e) { $('vozEstado').textContent = 'Necesito permiso del micrófono. Ve a Ajustes → Safari → Micrófono → Permitir, y vuelve a intentar.'; return; }
-  const tipo = ['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-  const rec = new MediaRecorder(stream, tipo ? {mimeType: tipo} : undefined), partes = [];
-  rec.ondataavailable = e => e.data.size && partes.push(e.data);
-  rec.onstop = async () => { stream.getTracks().forEach(t => t.stop()); grabando = null;
+  try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); }
+  catch(e) { aviso('No tengo permiso del micrófono (' + e.name + '). Ve a Ajustes → Apps → Safari → Micrófono → Permitir, cierra la app y vuelve a abrirla.'); return; }
+  const tipo = ['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  let rec;
+  try { rec = new MediaRecorder(stream, tipo ? {mimeType: tipo} : undefined); } catch(e) { rec = new MediaRecorder(stream); }
+  const partes = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) partes.push(e.data); };
+  rec.onerror = e => aviso('Error al grabar: ' + (e.error && e.error.name || 'desconocido'));
+  rec.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); grabando = null;
     const blob = new Blob(partes, {type: rec.mimeType || tipo || 'audio/mp4'});
-    if (blob.size > 2000) await putClip(id, blob); renderVoz(); };
-  grabando = rec; rec.start();
+    if (blob.size < 500) { aviso('La grabación salió vacía. Toca Grabar, habla y luego toca Parar.'); renderVoz(); return; }
+    aviso('Guardando...');
+    const r = await putClip(id, blob);
+    aviso(r === 'ok' ? '✓ Guardada. Tócale ▶ para escucharla.' : r);
+    renderVoz();
+  };
+  grabando = rec; rec.start(250);
   btn.textContent = '■ Parar'; btn.classList.add('rec');
+  aviso('🔴 Grabando... habla y luego toca ■ Parar.');
   setTimeout(() => { if (rec.state === 'recording') rec.stop(); }, 15000);
 }
 $('goVoz').onclick = () => { $('voz').hidden = !$('voz').hidden; if (!$('voz').hidden) { renderVoz(); $('voz').scrollIntoView({behavior:'smooth'}); } };
