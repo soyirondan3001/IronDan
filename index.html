@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0d10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Iron Dan">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Iron Dan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: gym de noche, directo, sin adornos — una herramienta de trabajo
+   IDEA: el monitor de edición de un creador: preview vertical grande + consola de controles
+   PICTURE: el lienzo 9:16 con el reel en vivo (y Iron Dan pixel saludando)
+   COLOUR and TYPE: negro asfalto, azul Nightwing #2F7BFF, blanco; Poppins 800/500
+   LAYOUT: móvil: preview arriba, controles en una columna; escritorio: preview izq, controles der */
+:root{color-scheme:dark;--bg:#0c0d10;--panel:#16181d;--line:#262a33;--ink:#f2f3f5;--mute:#9aa0aa;--acc:#2F7BFF}
+*{box-sizing:border-box;min-width:0}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Poppins,system-ui,sans-serif;overflow-x:clip}
+header{display:flex;align-items:center;gap:12px;padding:16px max(4vw,16px) 8px}
+header canvas{width:36px;height:44px;image-rendering:pixelated}
+h1{font-size:22px;line-height:1.05;margin:0;font-weight:800;letter-spacing:-.01em}
+header p{margin:0;color:var(--mute);font-size:13px}
+main{display:grid;gap:20px;padding:8px max(4vw,16px) 40px;max-width:1100px;margin:auto}
+@media(min-width:860px){main{grid-template-columns:minmax(0,380px) minmax(0,1fr);align-items:start}.stage{position:sticky;top:12px}}
+.stage{display:grid;gap:10px}
+.screen{position:relative;aspect-ratio:9/16;width:100%;max-width:420px;margin:auto;border-radius:22px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.screen canvas{position:absolute;inset:0;width:100%;height:100%}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--mute);font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+button,.file{font:600 16px Poppins,sans-serif;min-height:48px;padding:0 18px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button.main,.file.main{background:var(--acc);border-color:var(--acc);color:#fff;flex:1}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #8fb6ff;outline-offset:2px}
+.file input{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:14px}
+.card h2{font-size:17px;margin:0;font-weight:700}
+label{display:grid;gap:6px;font-size:14px;color:var(--mute)}
+input[type=number],input[type=text],textarea{font:16px Poppins,sans-serif;color:var(--ink);background:#0f1115;border:1px solid var(--line);border-radius:12px;padding:12px}
+textarea{min-height:120px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:40px;padding:0 14px;border-radius:999px;font-size:14px;font-weight:500}
+.chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc)}
+.hooks{display:grid;gap:8px}
+.hooks button{justify-content:flex-start;text-align:left;font-weight:500;font-size:15px;min-height:44px;padding:8px 14px}
+.note{font-size:13px;color:var(--mute);margin:0}
+.bar{height:8px;border-radius:8px;background:#0f1115;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.copy{white-space:pre-wrap;background:#0f1115;border-radius:12px;padding:12px;font-size:15px;margin:0}
+
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-tap-highlight-color:transparent}
+#back{margin-left:auto;min-height:40px;font-size:14px}
+#home{display:grid;gap:18px;padding:4px max(4vw,16px) 40px;max-width:560px;margin:auto}
+.hero{position:relative;display:grid;justify-items:center;gap:8px;padding:18px 12px 8px;border-radius:24px;background:radial-gradient(120% 90% at 50% 100%,#1b3f8f 0%,#12204a 38%,#0c0d10 75%);border:1px solid var(--line);min-height:430px;align-content:end}
+.dan{background:none;border:0;padding:0;min-height:0;cursor:pointer}
+.dan canvas{width:min(46vw,190px);height:auto;aspect-ratio:auto;image-rendering:pixelated;display:block;filter:drop-shadow(0 18px 18px rgba(0,0,0,.5))}
+.bubble{position:relative;background:#fff;color:#111;border-radius:20px;padding:14px 16px;font-size:16px;line-height:1.45;max-width:100%;min-height:96px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.bubble b{display:block;font-weight:800;font-size:18px;margin-bottom:2px}
+.bubble::after{content:"";position:absolute;bottom:-12px;left:50%;margin-left:-12px;border:12px solid transparent;border-top-color:#fff;border-bottom:0}
+.tap{margin:0;font-size:13px;color:#b9c6e6}
+.today{display:grid;gap:12px}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:28px;line-height:1.05}
+.dayhead span:last-child{font-size:15px;font-weight:500;color:var(--mute)}
+.bar.big{height:10px}
+.today h2{font-size:17px;margin:6px 0 0}
+.tasks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.task{width:100%;justify-content:flex-start;text-align:left;font-weight:500;font-size:16px;gap:12px}
+.task .box{width:22px;height:22px;border-radius:7px;border:2px solid #4a5160;flex:none}
+.task[aria-pressed=true]{color:var(--mute);text-decoration:line-through}
+.task[aria-pressed=true] .box{background:var(--acc);border-color:var(--acc)}
+@media(prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <canvas id="logo" width="34" height="34"></canvas>
+  <div><h1>Iron Dan</h1><p>@soy_irondan · reto Nightwing</p></div>
+  <button id="back" hidden>← Inicio</button>
+</header>
+<section id="home">
+  <div class="hero">
+    <div class="bubble" id="bubble" aria-live="polite"><b id="saludo">¡Qué onda, Danny!</b><span id="decir"></span></div>
+    <button class="dan" id="dan" aria-label="Toca a Iron Dan para que te hable"><canvas id="danCv" width="24" height="33"></canvas></button>
+    <p class="tap" id="tap">Toca a Iron Dan para escucharlo</p>
+  </div>
+  <div class="today">
+    <div class="dayhead"><span>DÍA <b id="hDia">1</b> / 90</span><span id="hFecha"></span></div>
+    <div class="bar big"><i id="hBar"></i></div>
+    <h2>Hoy toca</h2>
+    <ul class="tasks" id="tasks"></ul>
+    <div class="row">
+      <button class="main" id="goEdit">Editar el reel de hoy</button>
+      <button id="goPlan">Mi plan</button>
+    </div>
+  </div>
+  <div class="card" id="plan" hidden>
+    <h2>Mi plan semanal</h2>
+    <p class="note">Lo que Iron Dan te dice cada día. Se guarda en tu teléfono.</p>
+    <div id="planRows" style="display:grid;gap:10px"></div>
+    <label>Hora de publicar<input id="hora" type="text" value="7:00 pm"></label>
+  </div>
+</section>
+
+<main id="editor" hidden>
+  <section class="stage">
+    <div class="screen">
+      <canvas id="cv" width="1080" height="1920"></canvas>
+      <div class="empty" id="empty">Elige un video de tu galería.<br>Aquí lo verás ya editado.</div>
+    </div>
+    <div class="row">
+      <label class="file main">Elegir video<input id="pick" type="file" accept="video/*"></label>
+      <button id="play" disabled>▶ Ver</button>
+    </div>
+    <p class="note" id="status">Sin video todavía.</p>
+  </section>
+
+  <section style="display:grid;gap:16px">
+    <div class="card">
+      <h2>Reto</h2>
+      <div class="two">
+        <label>Día<input id="dia" type="number" min="1" max="365" inputmode="numeric"></label>
+        <label>Peso hoy (kg)<input id="peso" type="number" step="0.1" inputmode="decimal" placeholder="97.4"></label>
+      </div>
+      <div class="chips">
+        <button class="chip" data-t="reto" aria-pressed="true">Día y barra</button>
+        <button class="chip" data-t="pesoOn" aria-pressed="true">Chip de peso</button>
+        <button class="chip" data-t="mascota" aria-pressed="true">Iron Dan pixel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Lo que dices en el video</h2>
+      <label>Escríbelo o díctalo con el micrófono del teclado. Así salen los subtítulos palabra por palabra.
+        <textarea id="texto" placeholder="Día nueve del reto y hoy toca pierna. Les voy a enseñar la rutina completa..."></textarea></label>
+      <label>Ajuste de tiempo de subtítulos: <span id="offV">0.0 s</span>
+        <input id="off" type="range" min="-0.6" max="0.6" step="0.05" value="0"></label>
+      <div class="chips">
+        <button class="chip" data-t="subs" aria-pressed="true">Subtítulos</button>
+        <button class="chip" data-t="cortes" aria-pressed="true">Quitar silencios</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Gancho (primeros 3 segundos)</h2>
+      <input id="gancho" type="text" placeholder="Día 9 y ya no siento las piernas">
+      <button id="ideas">Pedir 5 ganchos a Claude</button>
+      <div class="hooks" id="hooks"></div>
+    </div>
+
+    <div class="card">
+      <h2>Encuadre</h2>
+      <div class="chips">
+        <button class="chip" data-m="recorte" aria-pressed="true">Recortar</button>
+        <button class="chip" data-m="desenfoque" aria-pressed="false">Fondo desenfocado</button>
+      </div>
+      <label>Posición del recorte (si el video es horizontal)<input id="cx" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+    </div>
+
+    <div class="card">
+      <h2>Exportar</h2>
+      <button class="main" id="exp" disabled>Crear reel</button>
+      <div class="bar"><i id="prog"></i></div>
+      <p class="note" id="expNote">El reel se graba en tiempo real: un video de 1 min tarda ~1 min. Deja la pantalla prendida.</p>
+      <button id="save" hidden>Guardar en el teléfono</button>
+      <button id="copyBtn" hidden>Escribir el copy con Claude</button>
+      <pre class="copy" id="copy" hidden></pre>
+      <button id="copyCopy" hidden>Copiar texto</button>
+    </div>
+  </section>
+</main>
+
+<script>
+{
+const SPRITE = {"idle":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSMMMSSSSs....",".......sSSSSSSSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"],"flex":[".........hHHHHh...................",".......HHHHhhHHHH.................","......HHHhhHHHHHHHH...............",".....HHhHHHHHHhhHHHH..............",".....HHHHHHHHHHHHHHHH.............","....KHHHHHHHHHHHHHHHHK..sYSs......","....KHHHSSSHHHSSSSHHHK.sSSSSs.....","...KKKHSSSSSSSSSSSSHKKKSSSSSS.....","...KGKHSSSSSSSSSSSSHKGKSSssSS.....","...KGKSSHHHSSSSHHHSSKGK.SSSS......","...KGKSSSSSSSSSSSSSSKGK.SSSs......","...KKKSSSESSSSSSESSSKKK.SSSs......",".....SSSSESSssSSESSSS...SSSs......",".....sSSSSSSSSSSSSSSs..SSSSs......","......sSSSSSMMMSSSSs...SSSSs......",".......sSSSSSSSSSSs...SSSSSs......",".........ssSSSSss....SYYSSSSs.....","..........sSSSs.....NSSSSSSSs.....","....nNNNNNNNNNNNNNNNNNSSSSSs......","...NNNNNNBNNNNNNBNNNNNNsss........","..SNNNNNNBNNNNNNBNNNNN............","..SSNNNNNNNNNNNNNNNNNN............","..SSNNNNNNNnnnnNNNNNNN............","..SSNNNNNNNNNNNNNNNNNN............","..SSnNNNNNNNNNNNNNNNNn............","..WWwLLLLLLLLLLLLLLLLs............","..SS.LLLLLLLLLLLLLLLL.............",".....LLLLlLLL..LLLlLLLL...........",".....LLlLLLLL..LLLLLlLL...........",".....LLllLLLL..LLLLllLL...........",".....LLLLLLLL..LLLLLLLL...........",".....LLLLLLLL..LLLLLLLL...........","....TTTTTTTTT..TTTTTTTTT.........."],"pal":{"K":"#14141a","G":"#3c3e48","H":"#1e1a19","h":"#4e4038","S":"#ce9268","s":"#aa704e","E":"#181416","M":"#7a483c","N":"#1e2c52","n":"#141e3a","B":"#344a80","W":"#0e0e12","w":"#6ecdff","L":"#18181c","l":"#2e2e36","T":"#ececf0","Y":"#e8b286"},"talk":[".........hHHHHh.........",".......HHHHhhHHHH.......","......HHHhhHHHHHHHH.....",".....HHhHHHHHHhhHHHH....",".....HHHHHHHHHHHHHHHH...","....KHHHHHHHHHHHHHHHHK..","....KHHHSSSHHHSSSSHHHK..","...KKKHSSSSSSSSSSSSHKKK.","...KGKHSSSSSSSSSSSSHKGK.","...KGKSSHHHSSSSHHHSSKGK.","...KGKSSSSSSSSSSSSSSKGK.","...KKKSSSESSSSSSESSSKKK.",".....SSSSESSssSSESSSS...",".....sSSSSSSSSSSSSSSs...","......sSSSSSEEESSSSs....",".......sSSSSMMSSSSs.....",".........ssSSSSss.......","..........sSSSs.........","....nNNNNNNNNNNNNNNNNn..","...NNNNNNBNNNNNNBNNNNNN.","..SNNNNNNBNNNNNNBNNNNNNS","..SSNNNNNNNNNNNNNNNNNNSS","..SSNNNNNNNnnnnNNNNNNNSS","..SSNNNNNNNNNNNNNNNNNNSS","..SSnNNNNNNNNNNNNNNNNnSS","..WWwLLLLLLLLLLLLLLLLsSS","..SS.LLLLLLLLLLLLLLLL.SS",".....LLLLlLLL..LLLlLLLL.",".....LLlLLLLL..LLLLLlLL.",".....LLllLLLL..LLLLllLL.",".....LLLLLLLL..LLLLLLLL.",".....LLLLLLLL..LLLLLLLL.","....TTTTTTTTT..TTTTTTTTT"]};
+const CFG = {inicio:'2026-11-09', dias:90, peso0:99, meta:83, handle:'@soy_irondan', reto:'RETO NIGHTWING', acc:'#2F7BFF'};
+const W = 1080, H = 1920, FPS = 30;
+const $ = id => document.getElementById(id);
+const cv = $('cv'), cx = cv.getContext('2d');
+const st = {reto:true, pesoOn:true, mascota:true, subs:true, cortes:true, modo:'recorte'};
+let outDur = 0, video = null, dur = 0, keep = [], voiced = [], words = [], blob = null, playing = false, exporting = false;
+let actx = null, srcNode = null, outGain = null, recDest = null;
+
+// ---------- sprite ----------
+const spriteCanvas = {};
+for (const k of ['idle','flex','talk']) {
+  const g = SPRITE[k], c = document.createElement('canvas');
+  c.width = g[0].length; c.height = g.length;
+  const x = c.getContext('2d');
+  g.forEach((r,y) => [...r].forEach((ch,i) => { if (SPRITE.pal[ch]) { x.fillStyle = SPRITE.pal[ch]; x.fillRect(i,y,1,1); } }));
+  spriteCanvas[k] = c;
+}
+{ const l = $('logo').getContext('2d'); l.imageSmoothingEnabled = false; l.drawImage(spriteCanvas.flex, 0, 0, 34, 34*spriteCanvas.flex.height/spriteCanvas.flex.width); }
+
+// ---------- ajustes ----------
+const diaHoy = Math.max(1, Math.floor((Date.now() - new Date(CFG.inicio+'T00:00:00')) / 864e5) + 1);
+try { const s = JSON.parse(localStorage.getItem('irondan') || '{}'); if (s.peso) $('peso').value = s.peso; } catch(e) {}
+$('dia').value = diaHoy;
+document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+  st[b.dataset.t] = !st[b.dataset.t]; b.setAttribute('aria-pressed', st[b.dataset.t]);
+  if (b.dataset.t === 'cortes') rebuild(); draw();
+});
+document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+  st.modo = b.dataset.m; document.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o === b)); draw();
+});
+['dia','peso','gancho','cx'].forEach(id => $(id).oninput = () => { try { localStorage.setItem('irondan', JSON.stringify({peso:$('peso').value})); } catch(e) {} draw(); });
+$('texto').oninput = () => { placeWords(); draw(); };
+$('off').oninput = () => { $('offV').textContent = (+$('off').value).toFixed(2) + ' s'; placeWords(); draw(); };
+
+// ---------- cargar video ----------
+$('pick').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (video) { video.pause(); URL.revokeObjectURL(video.src); video.remove(); }
+  video = document.createElement('video');
+  video.playsInline = true; video.preload = 'auto'; video.src = URL.createObjectURL(f);
+  video.setAttribute('playsinline',''); video.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none'; document.body.append(video);
+  $('status').textContent = 'Cargando video...';
+  await new Promise((ok, bad) => { video.onloadedmetadata = ok; video.onerror = () => bad(); }).catch(() => { $('status').textContent = 'No pude abrir ese video.'; });
+  dur = video.duration;
+  await new Promise(ok => { video.onseeked = ok; video.currentTime = 0.05; });
+  $('empty').hidden = true; srcNode = null;
+  draw();
+  $('status').textContent = 'Analizando el audio para encontrar silencios...';
+  await analyze(f);
+  $('play').disabled = false; $('exp').disabled = false;
+};
+
+async function analyze(file) {
+  voiced = [];
+  try {
+    if (file.size > 600e6) throw new Error('grande');
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const off = new AC();
+    const buf = await off.decodeAudioData(await file.arrayBuffer());
+    off.close && off.close();
+    const d = buf.getChannelData(0), sr = buf.sampleRate, win = Math.round(sr * 0.02), rms = [];
+    for (let i = 0; i + win <= d.length; i += win) { let s = 0; for (let j = i; j < i + win; j += 4) s += d[j]*d[j]; rms.push(Math.sqrt(s / (win/4))); }
+    const sorted = [...rms].sort((a,b) => a-b), q = p => sorted[Math.floor(p*(sorted.length-1))];
+    const thr = q(0.2) + (q(0.92) - q(0.2)) * 0.22;
+    let a = null;
+    rms.forEach((v,i) => { const t = i*0.02; if (v > thr && a === null) a = t; if (v <= thr && a !== null) { voiced.push([a,t]); a = null; } });
+    if (a !== null) voiced.push([a, rms.length*0.02]);
+    const merged = [];
+    for (const s of voiced) { if (merged.length && s[0] - merged.at(-1)[1] < 0.45) merged.at(-1)[1] = s[1]; else merged.push([...s]); }
+    voiced = merged.filter(s => s[1] - s[0] > 0.15);
+    $('status').textContent = voiced.length ? `Listo. Encontré ${voiced.length} partes con voz.` : 'Listo. No detecté voz; se usa el video completo.';
+  } catch(err) {
+    $('status').textContent = 'No pude leer el audio (video muy pesado). Se usa completo, sin quitar silencios.';
+  }
+  rebuild();
+}
+
+function rebuild() {
+  if (st.cortes && voiced.length) {
+    keep = [];
+    for (const [a,b] of voiced) { const s = Math.max(0, a-0.12), e = Math.min(dur, b+0.18);
+      if (keep.length && s <= keep.at(-1).e) keep.at(-1).e = e; else keep.push({s, e}); }
+  } else keep = [{s:0, e:dur}];
+  let acc = 0; keep.forEach(k => { k.o = acc; acc += k.e - k.s; });
+  outDur = acc;
+  placeWords();
+  const ahorro = dur - acc;
+  if (ahorro > 0.5) $('status').textContent += ` Quité ${ahorro.toFixed(1)} s de silencios.`;
+}
+const toOut = t => { for (const k of keep) if (t >= k.s && t <= k.e) return k.o + t - k.s; return -1; };
+
+function placeWords() {
+  const tokens = $('texto').value.trim().split(/\s+/).filter(Boolean);
+  words = [];
+  if (!tokens.length || !dur) return;
+  const segs = voiced.length ? voiced : [[0, dur]];
+  const total = segs.reduce((a,s) => a + s[1]-s[0], 0);
+  const wts = tokens.map(w => w.replace(/[^\p{L}\p{N}]/gu,'').length + 1.5), sum = wts.reduce((a,b) => a+b, 0);
+  const at = p => { let x = p * total; for (const s of segs) { const L = s[1]-s[0]; if (x <= L) return s[0] + x; x -= L; } return segs.at(-1)[1]; };
+  let c = 0, offv = +$('off').value;
+  tokens.forEach((w,i) => { const a = at(c/sum); c += wts[i]; const b = at(c/sum);
+    words.push({t:w, a:toOut(a) + offv, b:toOut(b) + offv}); });
+  words = words.filter(w => w.a >= -1);
+  // frases de máx. 3 palabras, cortando en puntuación
+  let ph = 0, n = 0;
+  words.forEach((w,i) => { w.ph = ph; n++; if (n >= 3 || /[.,!?;:]$/.test(w.t)) { ph++; n = 0; } });
+}
+
+// ---------- dibujo ----------
+const tiny = document.createElement('canvas'); tiny.width = 27; tiny.height = 48;
+function rr(x,y,w,h,r){ cx.beginPath(); cx.roundRect ? cx.roundRect(x,y,w,h,r) : cx.rect(x,y,w,h); }
+function drawVideo() {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw) return;
+  const vertical = vw/vh <= 9/16 + 0.01;
+  if (vertical || st.modo === 'recorte') {
+    const sc = Math.max(W/vw, H/vh), dw = vw*sc, dh = vh*sc;
+    const px = vertical ? 0.5 : +$('cx').value;
+    cx.drawImage(video, (W-dw)*px, (H-dh)/2, dw, dh);
+  } else {
+    const t = tiny.getContext('2d'); t.drawImage(video, 0, 0, 27, 48);
+    cx.imageSmoothingEnabled = true; cx.drawImage(tiny, -40, -40, W+80, H+80);
+    cx.fillStyle = 'rgba(0,0,0,.35)'; cx.fillRect(0,0,W,H);
+    const dh = W * vh / vw; cx.drawImage(video, 0, (H-dh)/2, W, dh);
+  }
+}
+function wrap(text, maxW) {
+  const out = []; let line = '';
+  for (const w of text.split(' ')) { const tryL = line ? line+' '+w : w; if (cx.measureText(tryL).width > maxW && line) { out.push(line); line = w; } else line = tryL; }
+  if (line) out.push(line); return out;
+}
+function draw(tOut = 0) {
+  cx.fillStyle = '#000'; cx.fillRect(0,0,W,H);
+  if (!video) return;
+  drawVideo();
+  cx.textBaseline = 'alphabetic';
+  const dia = +$('dia').value || diaHoy, peso = parseFloat($('peso').value);
+  if (st.reto) {
+    const x0 = 70, y0 = 200, aw = W - 140;
+    cx.font = '500 30px Poppins'; cx.fillStyle = 'rgba(255,255,255,.8)'; cx.textAlign = 'left'; cx.fillText(CFG.reto, x0, y0);
+    cx.font = '800 50px Poppins'; cx.fillStyle = '#fff'; cx.textAlign = 'right'; cx.fillText(`DÍA ${dia}/${CFG.dias}`, x0+aw, y0+4);
+    cx.fillStyle = 'rgba(255,255,255,.28)'; rr(x0, y0+24, aw, 12, 6); cx.fill();
+    cx.fillStyle = CFG.acc; rr(x0, y0+24, Math.max(14, aw*Math.min(1, dia/CFG.dias)), 12, 6); cx.fill();
+    if (st.pesoOn && peso) {
+      const baj = +(CFG.peso0 - peso).toFixed(1);
+      const txt = (baj > 0 ? `−${baj} kg  ·  ` : '') + `${peso} kg  ·  meta ${CFG.meta} kg`;
+      cx.font = '500 30px Poppins'; cx.textAlign = 'left'; const tw = cx.measureText(txt).width;
+      cx.fillStyle = 'rgba(0,0,0,.55)'; rr(x0, y0+58, tw+44, 56, 28); cx.fill();
+      cx.fillStyle = '#fff'; cx.fillText(txt, x0+22, y0+97);
+    }
+  }
+  const g = $('gancho').value.trim().toUpperCase();
+  if (g && tOut < 3) {
+    const a = Math.min(1, tOut/0.15, (3 - tOut)/0.2);
+    cx.globalAlpha = Math.max(0, a);
+    cx.font = '800 76px Poppins'; cx.textAlign = 'center';
+    const lines = wrap(g, W - 220), lh = 92, top = 470;
+    const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 70;
+    cx.fillStyle = CFG.acc; rr((W-bw)/2, top-70, bw, lines.length*lh + 40, 18); cx.fill();
+    cx.fillStyle = '#fff'; lines.forEach((l,i) => cx.fillText(l, W/2, top + i*lh));
+    cx.globalAlpha = 1;
+  }
+  if (st.subs && words.length) {
+    const i = words.findIndex(w => tOut >= w.a && tOut < w.b);
+    const cur = i >= 0 ? i : words.findLastIndex(w => w.b <= tOut && tOut - w.b < 0.6);
+    if (cur >= 0) {
+      const ph = words.filter(w => w.ph === words[cur].ph);
+      let fs = 88; cx.font = `700 ${fs}px Poppins`; let sp = 22;
+      let widths = ph.map(w => cx.measureText(w.t).width);
+      const tot = widths.reduce((a,b) => a+b, 0) + sp*(ph.length-1);
+      if (tot > W - 140) { const k = (W - 140) / tot; fs = Math.floor(fs*k); sp *= k; widths = widths.map(v => v*k); }
+      let x = W/2 - (widths.reduce((a,b) => a+b, 0) + sp*(ph.length-1))/2;
+      const y = 1330; cx.textAlign = 'left'; cx.lineJoin = 'round';
+      ph.forEach((w,k) => {
+        const idx = words.indexOf(w), act = idx === i;
+        cx.font = (act ? '800 ' : '700 ') + fs + 'px Poppins';
+        cx.lineWidth = 12; cx.strokeStyle = 'rgba(0,0,0,.75)'; cx.strokeText(w.t, x, y);
+        cx.fillStyle = act || idx < cur ? '#fff' : '#a8a8a8'; if (act && i < 0) cx.fillStyle = '#fff';
+        cx.fillText(w.t, x, y);
+        x += widths[k] + sp;
+      });
+    }
+  }
+  cx.font = '700 30px Poppins'; cx.textAlign = 'left'; cx.fillStyle = 'rgba(255,255,255,.65)'; cx.fillText(CFG.handle, st.mascota ? 300 : 70, 1520);
+  if (st.mascota) {
+    const fr = Math.floor(tOut * 2) % 2 ? spriteCanvas.flex : spriteCanvas.idle, s = 6;
+    cx.imageSmoothingEnabled = false;
+    cx.drawImage(fr, 70, 1530 - fr.height*s, fr.width*s, fr.height*s);
+    cx.imageSmoothingEnabled = true;
+  }
+}
+
+// ---------- reproducción / exportación ----------
+function audioGraph() {
+  if (srcNode) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  actx = actx || new AC();
+  srcNode = actx.createMediaElementSource(video);
+  outGain = actx.createGain(); recDest = actx.createMediaStreamDestination();
+  srcNode.connect(outGain); outGain.connect(actx.destination); srcNode.connect(recDest);
+}
+function run(onTick, onEnd) {
+  let ki = 0, waiting = false, stop = false;
+  const jump = i => { waiting = true; video.pause(); onTick('pause');
+    video.onseeked = () => { video.onseeked = null; waiting = false; onTick('resume'); video.play(); };
+    video.currentTime = keep[i].s + 0.001; };
+  const loop = () => {
+    if (stop) return;
+    if (!waiting) {
+      const t = video.currentTime, k = keep[ki];
+      if (t >= k.e - 0.02 || video.ended) {
+        ki++; if (ki >= keep.length) { stop = true; video.pause(); onEnd(); return; }
+        jump(ki);
+      } else { const o = k.o + Math.max(0, t - k.s); draw(o); onTick('frame', o); }
+    }
+    requestAnimationFrame(loop);
+  };
+  jump(0); requestAnimationFrame(loop);
+  return () => { stop = true; video.pause(); };
+}
+let stopPlay = null;
+$('play').onclick = async () => {
+  if (exporting) return;
+  if (playing) { stopPlay && stopPlay(); playing = false; $('play').textContent = '▶ Ver'; return; }
+  audioGraph(); await actx.resume(); outGain.gain.value = 1;
+  playing = true; $('play').textContent = '■ Parar';
+  stopPlay = run(() => {}, () => { playing = false; $('play').textContent = '▶ Ver'; });
+};
+
+$('exp').onclick = async () => {
+  if (exporting || !video) return;
+  if (playing) $('play').click();
+  await document.fonts.load('800 80px Poppins');
+  audioGraph(); await actx.resume(); outGain.gain.value = 0;
+  const types = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
+  const mime = types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!mime || !cv.captureStream) { $('expNote').textContent = 'Este navegador no puede grabar video. Ábrelo en Safari o Chrome actualizado.'; return; }
+  const stream = new MediaStream([...cv.captureStream(FPS).getVideoTracks(), ...recDest.stream.getAudioTracks()]);
+  const rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: 10e6, audioBitsPerSecond: 192e3});
+  const chunks = []; rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  exporting = true; $('exp').disabled = true; $('save').hidden = true; $('expNote').textContent = 'Grabando tu reel... no cambies de app.';
+  rec.start(500); let started = true;
+  run((ev, o) => {
+    if (ev === 'pause' && rec.state === 'recording') rec.pause();
+    if (ev === 'resume' && rec.state === 'paused') rec.resume();
+    if (ev === 'frame') $('prog').style.width = (100*o/outDur).toFixed(1) + '%';
+  }, () => {
+    rec.onstop = () => {
+      blob = new Blob(chunks, {type: mime}); exporting = false; outGain.gain.value = 1;
+      $('exp').disabled = false; $('prog').style.width = '100%';
+      $('expNote').textContent = `Listo: ${outDur.toFixed(1)} s, ${(blob.size/1e6).toFixed(1)} MB.`;
+      $('save').hidden = false; $('copyBtn').hidden = false;
+    };
+    if (rec.state === 'paused') rec.resume();
+    setTimeout(() => rec.stop(), 300);
+  });
+};
+
+$('ideas').textContent = 'Copiar prompt de ganchos para Claude';
+$('copyBtn').textContent = 'Copiar prompt del copy para Claude';
+const copiar = async (txt, el) => { try { await navigator.clipboard.writeText(txt); el.textContent = 'Prompt copiado. Pégalo en la app de Claude.'; } catch(e) { el.textContent = txt; } };
+$('save').onclick = async () => {
+  if (!blob) return;
+  const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+  const file = new File([blob], `irondan_dia${$('dia').value || diaHoy}.${ext}`, {type: blob.type});
+  try {
+    if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file]}); $('expNote').textContent = 'Elige "Guardar video" para mandarlo a Fotos.'; return; }
+  } catch(e) { if (e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.append(a); a.click(); a.remove();
+};
+$('ideas').onclick = () => copiar(`Eres editor de reels fitness en español de México. Creador: Danny (@soy_irondan), reto de 90 días hacia el físico de Nightwing, va en el día ${$('dia').value}, de 99 kg hacia 83 kg. Escribe 5 ganchos para la pantalla de los primeros 3 segundos de este reel. Máximo 7 palabras cada uno, que den curiosidad o tensión, sin emojis. Lo que dice en el video: ${$('texto').value || '(usa el contexto del reto)'}`, $('hooks'));
+$('copyBtn').onclick = () => { $('copy').hidden = false; copiar(`Escribe el copy de Instagram para este reel de Danny (@soy_irondan), creador fitness de México. Reto de 90 días hacia el físico de Nightwing, día ${$('dia').value}${$('peso').value ? `, pesa ${$('peso').value} kg (empezó en 99, meta 83)` : ''}. Gancho en pantalla: "${$('gancho').value}". Lo que dice: ${$('texto').value || '(sin guion)'}. Formato: primera línea gancho; 2-3 líneas de valor en tono cercano; llamada a la acción tipo "Comenta RUTINA y te la mando"; 5 hashtags de nicho fitness en español.`, $('copy')); };
+
+// ================= BIENVENIDA =================
+const FRASES = [
+  "No soy el resultado todavía. Soy el proceso. Y el proceso hoy se llama entrenar.",
+  "Nadie va a venir a hacerlo por ti. Así que ponte los audífonos y vámonos.",
+  "El Danny de dentro de noventa días te está viendo. No le falles.",
+  "No tienes que tener ganas. Tienes que presentarte.",
+  "Un día malo entrenando le gana a un día perfecto en la cama.",
+  "La disciplina es hacerlo aunque nadie esté viendo. Y hoy, alguien sí está viendo.",
+  "Cada kilo que se va es una excusa menos.",
+  "Nightwing no se hizo en una semana. Tú tampoco. Pero hoy cuenta.",
+  "Lo difícil no es empezar. Es volver mañana. Y aquí estás.",
+  "Tu competencia es el Danny de ayer. Gánale.",
+  "Graba, entrena, sube. Repite. Así se construye esto.",
+  "El cuerpo cambia cuando la cabeza ya decidió. Y tú ya decidiste.",
+  "No cuentes los días. Haz que los días cuenten.",
+  "Si fuera fácil, todos lo harían. Por eso vale la pena.",
+  "Hoy no se negocia. Hoy se entrena.",
+  "Alguien allá afuera está empezando gracias a tus videos. Hazlo por él también.",
+  "Cansado sí. Rendido nunca.",
+  "Segundo lugar en la MexaFit fue el inicio, no el final.",
+  "Menos pretextos, más repeticiones.",
+  "El hierro no miente. Lo que le das, te lo regresa."
+];
+const PLAN_BASE = {1:'Pecho y tríceps', 2:'Espalda y bíceps', 3:'Pierna', 4:'Hombro y abdomen', 5:'Espalda y pecho', 6:'Pierna y glúteo', 0:'Descanso activo'};
+const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+let plan = PLAN_BASE, voces = null;
+try { plan = Object.assign({}, PLAN_BASE, JSON.parse(localStorage.getItem('irondan_plan') || '{}')); } catch(e) {}
+try { const h = localStorage.getItem('irondan_hora'); if (h) $('hora').value = h; } catch(e) {}
+
+const hoy = new Date(), dow = hoy.getDay();
+const fraseIdx = Math.floor(hoy / 864e5) % FRASES.length;
+const entreno = plan[dow];
+const descanso = /descanso/i.test(entreno);
+
+function mensaje() {
+  const ini = descanso ? `Día ${diaHoy} de 90. Hoy toca ${entreno.toLowerCase()}, pero el contenido no descansa.`
+                       : `Día ${diaHoy} de 90. Hoy toca ${entreno.toLowerCase()}.`;
+  return {saludo: hoy.getHours() < 12 ? '¡Buenos días, Danny!' : hoy.getHours() < 19 ? '¡Qué onda, Danny!' : '¡Buenas noches, Danny!',
+          texto: `${ini} ${FRASES[fraseIdx]}`};
+}
+
+function renderHome() {
+  $('hDia').textContent = diaHoy;
+  $('hFecha').textContent = `${DIAS[dow]} ${hoy.getDate()}`;
+  $('hBar').style.width = Math.min(100, diaHoy/90*100) + '%';
+  const key = 'irondan_tareas_' + hoy.toISOString().slice(0,10);
+  let hechas = {}; try { hechas = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+  const tareas = [
+    ['ent', descanso ? 'Descanso: caminar 30 min y estirar' : `Entrenar ${entreno.toLowerCase()}`],
+    ['grab', `Grabar el episodio del día ${diaHoy}`],
+    ['edit', 'Editar el reel aquí en la app'],
+    ['sub', `Subirlo a las ${$('hora').value}`],
+    ['com', 'Contestar 10 comentarios']
+  ];
+  $('tasks').innerHTML = tareas.map(([id,t]) => `<li><button class="task" data-id="${id}" aria-pressed="${!!hechas[id]}"><span class="box"></span>${t}</button></li>`).join('');
+  $('tasks').querySelectorAll('.task').forEach(b => b.onclick = () => {
+    hechas[b.dataset.id] = !hechas[b.dataset.id]; b.setAttribute('aria-pressed', hechas[b.dataset.id]);
+    try { localStorage.setItem(key, JSON.stringify(hechas)); } catch(e) {}
+  });
+  $('planRows').innerHTML = [1,2,3,4,5,6,0].map(d => `<label>${DIAS[d]}<input type="text" data-d="${d}" value="${plan[d].replace(/"/g,'&quot;')}"></label>`).join('');
+  $('planRows').querySelectorAll('input').forEach(i => i.onchange = () => {
+    plan[i.dataset.d] = i.value; try { localStorage.setItem('irondan_plan', JSON.stringify(plan)); } catch(e) {}
+  });
+  $('hora').onchange = () => { try { localStorage.setItem('irondan_hora', $('hora').value); } catch(e) {} renderHome(); };
+  const m = mensaje(); $('saludo').textContent = m.saludo;
+}
+
+// Iron Dan animado (respira, saluda y mueve la boca cuando habla)
+const dc = $('danCv').getContext('2d'); let hablando = false;
+function frameDan(t) {
+  const k = hablando ? (Math.floor(t/120) % 2 ? 'talk' : 'idle') : (Math.floor(t/1400) % 4 === 3 ? 'flex' : 'idle');
+  const c = spriteCanvas[k]; $('danCv').width = c.width; dc.clearRect(0,0,c.width,c.height); dc.drawImage(c,0,0);
+  requestAnimationFrame(frameDan);
+}
+requestAnimationFrame(frameDan);
+
+function escribir(texto) {
+  const el = $('decir'); el.textContent = ''; let i = 0;
+  const paso = () => { el.textContent = texto.slice(0, ++i); if (i < texto.length) setTimeout(paso, 28); };
+  paso();
+}
+
+async function cargarVoces() {
+  if (voces !== null) return voces;
+  try { voces = await (await fetch('voz/voces.json', {cache:'no-cache'})).json(); } catch(e) { voces = {}; }
+  return voces;
+}
+function reproducir(src) {
+  return new Promise(ok => { const a = new Audio(src); a.onended = ok; a.onerror = ok; a.play().catch(ok); });
+}
+async function hablar() {
+  const m = mensaje(); escribir(m.texto); $('tap').hidden = true;
+  hablando = true;
+  const v = await cargarVoces();
+  const dia = v.dias && v.dias[diaHoy], ent = v.entreno && v.entreno[entreno], fr = v.frases && v.frases[fraseIdx];
+  if (dia && fr) {
+    await reproducir('voz/' + dia); if (ent) await reproducir('voz/' + ent); await reproducir('voz/' + fr);
+  } else if ('speechSynthesis' in window) {
+    await new Promise(ok => {
+      const u = new SpeechSynthesisUtterance(m.saludo + ' ' + m.texto);
+      u.lang = 'es-MX'; u.rate = 1.03; u.pitch = 0.85;
+      const vs = speechSynthesis.getVoices().filter(x => x.lang.startsWith('es'));
+      u.voice = vs.find(x => /MX/.test(x.lang) && /Juan|Diego|Jorge|male/i.test(x.name)) || vs.find(x => /MX/.test(x.lang)) || vs[0] || null;
+      u.onend = ok; u.onerror = ok; speechSynthesis.cancel(); speechSynthesis.speak(u);
+    });
+  }
+  hablando = false;
+}
+$('dan').onclick = hablar;
+$('goPlan').onclick = () => { $('plan').hidden = !$('plan').hidden; };
+$('goEdit').onclick = () => { location.hash = 'editor'; };
+$('back').onclick = () => { location.hash = ''; };
+const ruta = () => { const ed = location.hash === '#editor'; $('editor').hidden = !ed; $('home').hidden = ed; $('back').hidden = !ed; window.scrollTo(0,0); if (ed) draw(); };
+window.addEventListener('hashchange', ruta);
+renderHome(); ruta();
+escribir(mensaje().texto);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+document.fonts && document.fonts.load('800 80px Poppins').then(() => draw());
+draw();
+}
+</script>
+</body>
+</html>
